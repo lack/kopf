@@ -321,6 +321,49 @@ with the ids like ``create_fn/item1``, ``create_fn/item2``, etc.
     and generating the dynamic functions of the sub-handlers.
 
 
+Updating Status
+===============
+
+Kopf will take the return value of all state-changing handlers (even
+sub-handlers) and add them to the Status of the corresponding kuberenetes
+object.  By default, this is stored under the handler id (which is the function
+name by default).
+
+So, given the following handler definition::
+
+    import kopf
+
+    @kopf.on.create('zalando.org', 'v1', 'kopfexamples')
+    def my_handler(spec, **_):
+        return {'field': 'value}
+
+The resulting object will have the following data::
+
+    spec:
+      ...
+    status:
+      my_handler:
+        field: value
+
+In order to remove the handler ID from the result, you may set the optional
+``status_prefix=False`` when defining the handler.
+
+So with the handler definition::
+
+    import kopf
+
+    @kopf.on.create('zalando.org', 'v1', 'kopfexamples', status_prefix=False)
+    def my_handler(spec, **_):
+        return {'field': 'value}
+
+The resulting object will have the following data::
+
+    spec:
+      ...
+    status:
+      field: value
+
+
 Filtering
 =========
 

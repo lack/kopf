@@ -136,6 +136,7 @@ def resume(  # lgtm[py/similar-function]
         labels: Optional[bodies.Labels] = None,
         annotations: Optional[bodies.Annotations] = None,
         when: Optional[callbacks.WhenHandlerFn] = None,
+        status_prefix: bool = True,
 ) -> ResourceHandlerDecorator:
     """ ``@kopf.on.resume()`` handler for the object resuming on operator (re)start. """
     def decorator(fn: callbacks.ResourceHandlerFn) -> callbacks.ResourceHandlerFn:
@@ -148,6 +149,7 @@ def resume(  # lgtm[py/similar-function]
             labels=labels, annotations=annotations, when=when,
             initial=True, deleted=deleted, requires_finalizer=None,
             reason=None,
+            status_prefix=status_prefix,
         )
         real_registry.resource_changing_handlers[real_resource].append(handler)
         return fn
@@ -167,6 +169,7 @@ def create(  # lgtm[py/similar-function]
         labels: Optional[bodies.Labels] = None,
         annotations: Optional[bodies.Annotations] = None,
         when: Optional[callbacks.WhenHandlerFn] = None,
+        status_prefix: bool = True,
 ) -> ResourceHandlerDecorator:
     """ ``@kopf.on.create()`` handler for the object creation. """
     def decorator(fn: callbacks.ResourceHandlerFn) -> callbacks.ResourceHandlerFn:
@@ -179,6 +182,7 @@ def create(  # lgtm[py/similar-function]
             labels=labels, annotations=annotations, when=when,
             initial=None, deleted=None, requires_finalizer=None,
             reason=causation.Reason.CREATE,
+            status_prefix=status_prefix,
         )
         real_registry.resource_changing_handlers[real_resource].append(handler)
         return fn
@@ -198,6 +202,7 @@ def update(  # lgtm[py/similar-function]
         labels: Optional[bodies.Labels] = None,
         annotations: Optional[bodies.Annotations] = None,
         when: Optional[callbacks.WhenHandlerFn] = None,
+        status_prefix: bool = True,
 ) -> ResourceHandlerDecorator:
     """ ``@kopf.on.update()`` handler for the object update or change. """
     def decorator(fn: callbacks.ResourceHandlerFn) -> callbacks.ResourceHandlerFn:
@@ -210,6 +215,7 @@ def update(  # lgtm[py/similar-function]
             labels=labels, annotations=annotations, when=when,
             initial=None, deleted=None, requires_finalizer=None,
             reason=causation.Reason.UPDATE,
+            status_prefix=status_prefix,
         )
         real_registry.resource_changing_handlers[real_resource].append(handler)
         return fn
@@ -230,6 +236,7 @@ def delete(  # lgtm[py/similar-function]
         labels: Optional[bodies.Labels] = None,
         annotations: Optional[bodies.Annotations] = None,
         when: Optional[callbacks.WhenHandlerFn] = None,
+        status_prefix: bool = True,
 ) -> ResourceHandlerDecorator:
     """ ``@kopf.on.delete()`` handler for the object deletion. """
     def decorator(fn: callbacks.ResourceHandlerFn) -> callbacks.ResourceHandlerFn:
@@ -242,6 +249,7 @@ def delete(  # lgtm[py/similar-function]
             labels=labels, annotations=annotations, when=when,
             initial=None, deleted=None, requires_finalizer=bool(not optional),
             reason=causation.Reason.DELETE,
+            status_prefix=status_prefix,
         )
         real_registry.resource_changing_handlers[real_resource].append(handler)
         return fn
@@ -262,6 +270,7 @@ def field(  # lgtm[py/similar-function]
         labels: Optional[bodies.Labels] = None,
         annotations: Optional[bodies.Annotations] = None,
         when: Optional[callbacks.WhenHandlerFn] = None,
+        status_prefix: bool = True,
 ) -> ResourceHandlerDecorator:
     """ ``@kopf.on.field()`` handler for the individual field changes. """
     def decorator(fn: callbacks.ResourceHandlerFn) -> callbacks.ResourceHandlerFn:
@@ -275,6 +284,7 @@ def field(  # lgtm[py/similar-function]
             labels=labels, annotations=annotations, when=when,
             initial=None, deleted=None, requires_finalizer=None,
             reason=None,
+            status_prefix=status_prefix,
         )
         real_registry.resource_changing_handlers[real_resource].append(handler)
         return fn
@@ -289,6 +299,7 @@ def event(  # lgtm[py/similar-function]
         labels: Optional[bodies.Labels] = None,
         annotations: Optional[bodies.Annotations] = None,
         when: Optional[callbacks.WhenHandlerFn] = None,
+        status_prefix: bool = True,
 ) -> ResourceHandlerDecorator:
     """ ``@kopf.on.event()`` handler for the silent spies on the events. """
     def decorator(fn: callbacks.ResourceHandlerFn) -> callbacks.ResourceHandlerFn:
@@ -301,6 +312,7 @@ def event(  # lgtm[py/similar-function]
             labels=labels, annotations=annotations, when=when,
             initial=None, deleted=None, requires_finalizer=None,
             reason=None,
+            status_prefix=status_prefix,
         )
         real_registry.resource_watching_handlers[real_resource].append(handler)
         return fn
@@ -321,6 +333,7 @@ def this(  # lgtm[py/similar-function]
         labels: Optional[bodies.Labels] = None,
         annotations: Optional[bodies.Annotations] = None,
         when: Optional[callbacks.WhenHandlerFn] = None,
+        status_prefix: Optional[bool] = None,
 ) -> ResourceHandlerDecorator:
     """
     ``@kopf.on.this()`` decorator for the dynamically generated sub-handlers.
@@ -356,12 +369,14 @@ def this(  # lgtm[py/similar-function]
         real_registry = registry if registry is not None else handling.subregistry_var.get()
         real_id = registries.generate_id(fn=fn, id=id,
                                          prefix=parent_handler.id if parent_handler else None)
+        handler_status_prefix = status_prefix if status_prefix is not None else parent_handler.status_prefix if parent_handler else True
         handler = handlers.ResourceHandler(
             fn=fn, id=real_id, field=None,
             errors=errors, timeout=timeout, retries=retries, backoff=backoff, cooldown=cooldown,
             labels=labels, annotations=annotations, when=when,
             initial=None, deleted=None, requires_finalizer=None,
             reason=None,
+            status_prefix=handler_status_prefix,
         )
         real_registry.append(handler)
         return fn

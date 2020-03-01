@@ -46,21 +46,22 @@ class BaseHandler:
 @dataclasses.dataclass
 class ActivityHandler(BaseHandler):
     fn: callbacks.ActivityHandlerFn  # type clarification
-    activity: Optional[causation.Activity]
+    activity: Optional[causation.Activity] = None
     _fallback: bool = False  # non-public!
 
 
 @dataclasses.dataclass
 class ResourceHandler(BaseHandler):
     fn: callbacks.ResourceHandlerFn  # type clarification
-    reason: Optional[causation.Reason]
-    field: Optional[dicts.FieldPath]
-    initial: Optional[bool]
-    deleted: Optional[bool]  # used for mixed-in (initial==True) @on.resume handlers only.
-    labels: Optional[bodies.Labels]
-    annotations: Optional[bodies.Annotations]
-    when: Optional[callbacks.WhenHandlerFn]
-    requires_finalizer: Optional[bool]
+    reason: Optional[causation.Reason] = None
+    field: Optional[dicts.FieldPath] = None
+    initial: Optional[bool] = None
+    deleted: Optional[bool] = None # used for mixed-in (initial==True) @on.resume handlers only.
+    labels: Optional[bodies.Labels] = None
+    annotations: Optional[bodies.Annotations] = None
+    when: Optional[callbacks.WhenHandlerFn] = None
+    requires_finalizer: Optional[bool] = None
+    status_prefix: Optional[bool] = True
 
     @property
     def event(self) -> Optional[causation.Reason]:

@@ -24,6 +24,11 @@ def handler():
     return Mock(id='some-id', spec_set=['id'])
 
 
+@pytest.fixture()
+def resource_handler():
+    return Mock(id='some-id', spec_set=['id', 'status_prefix'], status_prefix=True)
+
+
 @freezegun.freeze_time(TS0)
 def test_always_started_when_created_from_scratch(handler):
     patch = {}
@@ -209,7 +214,7 @@ def test_set_awake_time(handler, expected, body, delay):
     origbody = copy.deepcopy(body)
     patch = {}
     state = State.from_body(body=body, handlers=[handler])
-    state = state.with_outcomes(outcomes={handler.id: HandlerOutcome(final=False, delay=delay)})
+    state = state.with_outcomes(outcomes={handler.id: HandlerOutcome(final=False, delay=delay, handler=handler)})
     state.store(patch=patch)
     assert patch['status']['kopf']['progress']['some-id'].get('delayed') == expected
     assert body == origbody  # not modified
@@ -233,7 +238,7 @@ def test_set_retry_time(handler, expected_retries, expected_delayed, body, delay
     origbody = copy.deepcopy(body)
     patch = {}
     state = State.from_body(body=body, handlers=[handler])
-    state = state.with_outcomes(outcomes={handler.id: HandlerOutcome(final=False, delay=delay)})
+    state = state.with_outcomes(outcomes={handler.id: HandlerOutcome(final=False, delay=delay, handler=handler)})
     state.store(patch=patch)
     assert patch['status']['kopf']['progress']['some-id']['retries'] == expected_retries
     assert patch['status']['kopf']['progress']['some-id']['delayed'] == expected_delayed
@@ -250,7 +255,7 @@ def test_store_failure(handler, expected_retries, expected_stopped, body):
     origbody = copy.deepcopy(body)
     patch = {}
     state = State.from_body(body=body, handlers=[handler])
-    state = state.with_outcomes(outcomes={handler.id: HandlerOutcome(final=True, exception=error)})
+    state = state.with_outcomes(outcomes={handler.id: HandlerOutcome(final=True, exception=error, handler=handler)})
     state.store(patch=patch)
     assert patch['status']['kopf']['progress']['some-id']['success'] is False
     assert patch['status']['kopf']['progress']['some-id']['failure'] is True
@@ -269,7 +274,7 @@ def test_store_success(handler, expected_retries, expected_stopped, body):
     origbody = copy.deepcopy(body)
     patch = {}
     state = State.from_body(body=body, handlers=[handler])
-    state = state.with_outcomes(outcomes={handler.id: HandlerOutcome(final=True)})
+    state = state.with_outcomes(outcomes={handler.id: HandlerOutcome(final=True, handler=handler)})
     state.store(patch=patch)
     assert patch['status']['kopf']['progress']['some-id']['success'] is True
     assert patch['status']['kopf']['progress']['some-id']['failure'] is False
@@ -286,7 +291,32 @@ def test_store_success(handler, expected_retries, expected_stopped, body):
 ])
 def test_store_result(handler, expected_patch, result):
     patch = {}
-    outcomes = {handler.id: HandlerOutcome(final=True, result=result)}
+    outcomes = {handler.id: HandlerOutcome(final=True, result=result, handler=handler)}
+    deliver_results(outcomes=outcomes, patch=patch)
+    assert patch == expected_patch
+
+
+@pytest.mark.parametrize('result, expected_patch', [
+    (None, {}),
+    ('string', {'status': {'some-id': 'string'}}),
+    ({'field': 'value'}, {'status': {'some-id': {'field': 'value'}}}),
+])
+def test_store_resource_result(resource_handler, expected_patch, result):
+    patch = {}
+    outcomes = {resource_handler.id: HandlerOutcome(final=True, result=result, handler=resource_handler)}
+    deliver_results(outcomes=outcomes, patch=patch)
+    assert patch == expected_patch
+
+
+@pytest.mark.parametrize('result, expected_patch', [
+    (None, {}),
+    ('string', {'status': {'string': {}}}),
+    ({'field': 'value'}, {'status': {'field': 'value'}}),
+])
+def test_store_resource_result_no_prefix(resource_handler, expected_patch, result):
+    resource_handler.status_prefix = False
+    patch = {}
+    outcomes = {resource_handler.id: HandlerOutcome(final=True, result=result, handler=resource_handler)}
     deliver_results(outcomes=outcomes, patch=patch)
     assert patch == expected_patch
 

@@ -83,6 +83,7 @@ def test_on_resume_minimal(mocker, reason):
     assert handlers[0].labels is None
     assert handlers[0].annotations is None
     assert handlers[0].when is None
+    assert handlers[0].status_prefix == True
 
 
 def test_on_create_minimal(mocker):
@@ -106,6 +107,7 @@ def test_on_create_minimal(mocker):
     assert handlers[0].labels is None
     assert handlers[0].annotations is None
     assert handlers[0].when is None
+    assert handlers[0].status_prefix == True
 
 
 def test_on_update_minimal(mocker):
@@ -129,6 +131,7 @@ def test_on_update_minimal(mocker):
     assert handlers[0].labels is None
     assert handlers[0].annotations is None
     assert handlers[0].when is None
+    assert handlers[0].status_prefix == True
 
 
 def test_on_delete_minimal(mocker):
@@ -152,6 +155,7 @@ def test_on_delete_minimal(mocker):
     assert handlers[0].labels is None
     assert handlers[0].annotations is None
     assert handlers[0].when is None
+    assert handlers[0].status_prefix == True
 
 
 def test_on_field_minimal(mocker):
@@ -176,6 +180,7 @@ def test_on_field_minimal(mocker):
     assert handlers[0].labels is None
     assert handlers[0].annotations is None
     assert handlers[0].when is None
+    assert handlers[0].status_prefix == True
 
 
 def test_on_field_fails_without_field():
@@ -261,7 +266,8 @@ def test_on_resume_with_all_kwargs(mocker, reason):
                     deleted=True,
                     labels={'somelabel': 'somevalue'},
                     annotations={'someanno': 'somevalue'},
-                    when=when)
+                    when=when,
+                    status_prefix=False)
     def fn(**_):
         pass
 
@@ -279,6 +285,7 @@ def test_on_resume_with_all_kwargs(mocker, reason):
     assert handlers[0].labels == {'somelabel': 'somevalue'}
     assert handlers[0].annotations == {'someanno': 'somevalue'}
     assert handlers[0].when == when
+    assert handlers[0].status_prefix == False
 
 
 def test_on_create_with_all_kwargs(mocker):
@@ -294,7 +301,8 @@ def test_on_create_with_all_kwargs(mocker):
                     errors=ErrorsMode.PERMANENT, timeout=123, retries=456, backoff=78,
                     labels={'somelabel': 'somevalue'},
                     annotations={'someanno': 'somevalue'},
-                    when=when)
+                    when=when,
+                    status_prefix=False)
     def fn(**_):
         pass
 
@@ -311,6 +319,7 @@ def test_on_create_with_all_kwargs(mocker):
     assert handlers[0].labels == {'somelabel': 'somevalue'}
     assert handlers[0].annotations == {'someanno': 'somevalue'}
     assert handlers[0].when == when
+    assert handlers[0].status_prefix == False
 
 
 def test_on_update_with_all_kwargs(mocker):
@@ -326,7 +335,8 @@ def test_on_update_with_all_kwargs(mocker):
                     errors=ErrorsMode.PERMANENT, timeout=123, retries=456, backoff=78,
                     labels={'somelabel': 'somevalue'},
                     annotations={'someanno': 'somevalue'},
-                    when=when)
+                    when=when,
+                    status_prefix=False)
     def fn(**_):
         pass
 
@@ -343,6 +353,7 @@ def test_on_update_with_all_kwargs(mocker):
     assert handlers[0].labels == {'somelabel': 'somevalue'}
     assert handlers[0].annotations == {'someanno': 'somevalue'}
     assert handlers[0].when == when
+    assert handlers[0].status_prefix == False
 
 
 @pytest.mark.parametrize('optional', [
@@ -363,7 +374,8 @@ def test_on_delete_with_all_kwargs(mocker, optional):
                     optional=optional,
                     labels={'somelabel': 'somevalue'},
                     annotations={'someanno': 'somevalue'},
-                    when=when)
+                    when=when,
+                    status_prefix=False)
     def fn(**_):
         pass
 
@@ -380,6 +392,7 @@ def test_on_delete_with_all_kwargs(mocker, optional):
     assert handlers[0].labels == {'somelabel': 'somevalue'}
     assert handlers[0].annotations == {'someanno': 'somevalue'}
     assert handlers[0].when == when
+    assert handlers[0].status_prefix == False
 
 
 def test_on_field_with_all_kwargs(mocker):
@@ -396,7 +409,8 @@ def test_on_field_with_all_kwargs(mocker):
                    errors=ErrorsMode.PERMANENT, timeout=123, retries=456, backoff=78,
                    labels={'somelabel': 'somevalue'},
                    annotations={'someanno': 'somevalue'},
-                   when=when)
+                   when=when,
+                   status_prefix=False)
     def fn(**_):
         pass
 
@@ -413,6 +427,7 @@ def test_on_field_with_all_kwargs(mocker):
     assert handlers[0].labels == {'somelabel': 'somevalue'}
     assert handlers[0].annotations == {'someanno': 'somevalue'}
     assert handlers[0].when == when
+    assert handlers[0].status_prefix == False
 
 
 def test_subhandler_fails_with_no_parent_handler():
@@ -445,7 +460,7 @@ def test_subhandler_declaratively(mocker, parent_handler):
     handlers = registry.get_handlers(cause)
     assert len(handlers) == 1
     assert handlers[0].fn is fn
-
+    assert handlers[0].status_prefix == parent_handler.status_prefix
 
 def test_subhandler_imperatively(mocker, parent_handler):
     cause = mocker.MagicMock(reason=Reason.UPDATE, diff=None)
@@ -456,9 +471,28 @@ def test_subhandler_imperatively(mocker, parent_handler):
     def fn(**_):
         pass
 
+    parent_handler.status_prefix = False
     with context([(handler_var, parent_handler)]):
         kopf.register(fn)
 
     handlers = registry.get_handlers(cause)
     assert len(handlers) == 1
     assert handlers[0].fn is fn
+    assert handlers[0].status_prefix == parent_handler.status_prefix
+
+def test_subhandler_with_all_kwargs(mocker, parent_handler):
+    cause = mocker.MagicMock(reason=Reason.UPDATE, diff=None)
+
+    registry = ResourceChangingRegistry()
+    subregistry_var.set(registry)
+
+    with context([(handler_var, parent_handler)]):
+        @kopf.on.this(status_prefix = False)
+        def fn(**_):
+            pass
+
+    handlers = registry.get_handlers(cause)
+    assert len(handlers) == 1
+    assert handlers[0].fn is fn
+    assert handlers[0].status_prefix == False
+
