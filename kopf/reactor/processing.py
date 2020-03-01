@@ -215,11 +215,10 @@ async def process_resource_changing_cause(
             )
             state = state.with_outcomes(outcomes)
             state.store(patch=cause.patch)
-            states.deliver_results(outcomes=outcomes, patch=cause.patch)
-
             if state.done:
                 logger.info(f"All handlers succeeded for {title}.")
                 state.purge(patch=cause.patch, body=cause.body)
+            states.deliver_results(outcomes=outcomes, patch=cause.patch)
 
             done = state.done
             delay = state.delay

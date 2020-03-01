@@ -291,13 +291,21 @@ def test_store_result(handler, expected_patch, result):
     assert patch == expected_patch
 
 
-def test_purge_progress_when_exists_in_body(handler):
-    body = {'status': {'kopf': {'progress': {'some-id': {'retries': 5}}}}}
+@pytest.mark.parametrize('body, expected_patch', [
+    ({'status': {'kopf': {'progress': {'some-id': {'retries': 5}}}}},
+     {'status': None}),
+    ({'status':
+        {'kopf': {'progress': {'some-id': {'retries': 5}}},
+         'custom': {'data': 'persists'}},
+     },
+     {'status': {'kopf': None}}),
+])
+def test_purge_progress_when_exists_in_body(handler, expected_patch, body):
     patch = {}
     origbody = copy.deepcopy(body)
     state = State.from_body(body=body, handlers=[handler])
     state.purge(patch=patch, body=body)
-    assert patch == {'status': {'kopf': {'progress': None}}}
+    assert patch == expected_patch
     assert body == origbody  # not modified
 
 

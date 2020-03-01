@@ -86,4 +86,4 @@ async def test_2nd_step_finishes_the_handlers(caplog,
     assert k8s_mocked.patch_obj.called
 
     patch = k8s_mocked.patch_obj.call_args_list[0][1]['patch']
-    assert patch['status']['kopf']['progress'] is None
+    assert patch['status'] is None

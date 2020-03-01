@@ -235,18 +235,24 @@ class State(Mapping[handlers_.HandlerId, HandlerState]):
                 storage = patch.setdefault('status', {}).setdefault('kopf', {})
                 storage.setdefault('progress', {})[handler_id] = handler_state.as_patch()
 
+
     def purge(self, patch: patches.Patch, body: bodies.Body) -> None:
         if 'progress' in body.get('status', {}).get('kopf', {}):
             patch_storage = patch.setdefault('status', {}).setdefault('kopf', {})
             patch_storage['progress'] = None
-        elif 'progress' in patch.get('status', {}).get('kopf', {}):
-            del patch['status']['kopf']['progress']
-
-        # Avoid storing the empty status dicts (but do so if they have any content).
-        if 'status' in patch and 'kopf' in patch['status'] and not patch['status']['kopf']:
-            del patch['status']['kopf']
-        if 'status' in patch and not patch['status']:
-            del patch['status']
+            # Recursively prune empty status dicts:
+            if len(body.get('status', {}).get('kopf', {})) == 1:
+                # Nothing else in body.status.kopf: Mark it for deletion
+                patch['status']['kopf'] = None
+                if len(body.get('status', {}).keys()) == 1:
+                    # Nothing else in body.status: Mark it for deletion
+                    patch['status'] = None
+        elif 'kopf' not in body.get('status', {}):
+            if 'status' in patch:
+                if 'kopf' in patch['status']:
+                    del patch['status']['kopf']
+                if not patch['status']:
+                    del patch['status']
 
     def __len__(self) -> int:
         return len(self._states)
